@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zenith Client 1.12.2</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #0c0d12; font-family: sans-serif; }
+        #zenith-canvas { width: 100vw; height: 100vh; display: block; touch-action: none; }
+        #zenith-ui { position: absolute; top: 15px; left: 15px; z-index: 1000; display: flex; gap: 8px; }
+        .zenith-btn {
+            background: rgba(20, 24, 35, 0.85); color: #fff; border: 1px solid #2a344d;
+            padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 600;
+            backdrop-filter: blur(8px); cursor: pointer; transition: 0.2s ease;
+        }
+        .zenith-btn:hover { background: #00ff66; color: #000; }
+        .zenith-btn.mod-btn { background: #00ff66; color: #000; font-weight: bold; }
+        #host-modal {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #141722; padding: 20px; border-radius: 10px; border: 1px solid #334; z-index: 2000;
+            color: white; text-align: center;
+        }
+    </style>
+    <script src="ZenithGL.js"></script>
+    <script src="ZenithModEngine.js"></script>
+    <script src="DefaultMods.js"></script>
+    <script src="ZenithNet.js"></script>
+    <script src="ZenithVoice.js"></script>
+    <script src="ZenithTouch.js"></script>
+</head>
+<body>
+    <div id="zenith-ui">
+        <button class="zenith-btn mod-btn" onclick="window.ZenithModEngine.toggleUI()">Mods (⚙)</button>
+        <button class="zenith-btn" onclick="openHostModal()">Host Server</button>
+        <button class="zenith-btn" onclick="promptJoin()">Join Room</button>
+        <button class="zenith-btn" onclick="enableVoice()">Voice Chat (VC)</button>
+    </div>
+
+    <div id="host-modal">
+        <h3>Server Room Active</h3>
+        <p>Give this code to your friends to join:</p>
+        <input id="room-code-display" readonly style="width: 90%; padding: 8px; font-size: 14px; text-align: center; margin-bottom: 15px;" />
+        <br>
+        <button class="zenith-btn" onclick="document.getElementById('host-modal').style.display='none'">Close</button>
+    </div>
+
+    <canvas id="zenith-canvas"></canvas>
+
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            const canvas = document.getElementById("zenith-canvas");
+            const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+            window.ZenithGL.applyOptimizations(canvas, gl);
+            window.ZenithModEngine.init();
+
+            if ('ontouchstart' in window) {
+                window.ZenithTouch.init();
+            }
+
+            let lastTime = performance.now();
+            let frameCount = 0;
+            function gameLoop(currentTime) {
+                frameCount++;
+                if (currentTime - lastTime >= 1000) {
+                    window.ZenithModEngine.gameState.fps = frameCount;
+                    frameCount = 0;
+                    lastTime = currentTime;
+                }
+                window.ZenithModEngine.dispatchTick();
+                requestAnimationFrame(gameLoop);
+            }
+            requestAnimationFrame(gameLoop);
+        });
+
+        function openHostModal() {
+            window.ZenithNet.hostRoom((roomCode) => {
+                document.getElementById("host-modal").style.display = "block";
+                document.getElementById("room-code-display").value = roomCode;
+            });
+        }
+
+        function promptJoin() {
+            const code = prompt("Enter your friend's Room Code:");
+            if (code) window.ZenithNet.joinRoom(code);
+        }
+
+        function enableVoice() {
+            window.ZenithVoice.enableMicrophone().then(() => alert("Voice chat enabled!"));
+        }
+    </script>
+</body>
+</html>
